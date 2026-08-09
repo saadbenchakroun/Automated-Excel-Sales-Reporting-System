@@ -1,0 +1,31 @@
+# Environment
+.env
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Project output (generated artifacts - do not commit)
+logs/
+reports/
+data/processed/
+data/generated/
+
+# Internal / spec files (not part of the deliverable)
+AGENTS.md
+PROJECT_STATUS.md
+prompt.md
+forme/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

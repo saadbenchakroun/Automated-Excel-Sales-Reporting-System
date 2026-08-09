@@ -1,0 +1,42 @@
+app:
+  name: "Northstar Commerce Sales Reporting System"
+  company_name: "Northstar Commerce"
+  currency: "USD"
+  currency_symbol: "$"
+
+paths:
+  input_folder: "data/input"
+  output_folder: "reports"
+  processed_folder: "data/processed"
+  log_folder: "logs"
+
+report:
+  filename_pattern: "sales_report_{date}.xlsx"
+  include_raw_data: true
+
+logging:
+  level: "INFO"
+  log_file: "automation.log"
+  max_bytes: 5242880
+  backup_count: 3
+
+validation:
+  allowed_order_statuses:
+    - "Completed"
+    - "Pending"
+    - "Processing"
+    - "Cancelled"
+    - "Refunded"
+  max_discount: 1.0
+
+webhook:
+  # If true, Python posts the generated report to n8n after a successful run.
+  # Override with --no-webhook on the command line.
+  enabled: true
+  # The URL is read from the N8N_WEBHOOK_URL environment variable (.env file).
+  # This placeholder is replaced at runtime; secrets never live in this file.
+  url: "${N8N_WEBHOOK_URL}"
+  timeout_seconds: 30
+  max_attempts: 3
+  backoff_base_seconds: 2
+  include_attachment: true
