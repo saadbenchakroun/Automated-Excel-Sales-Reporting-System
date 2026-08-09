@@ -1,74 +1,65 @@
 {
-  "name": "Northstar Commerce - Sales Report Email",
-  "active": false,
+  "name": "Webhook File to Gmail",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "sales-report",
-        "responseMode": "responseNode",
+        "path": "file-upload",
+        "responseMode": "lastNode",
         "options": {
-          "responseData": "allEntries"
+          "binaryPropertyName": "data"
         }
       },
-      "id": "d30cedef-c69d-4ac4-b51e-667eb186c29b",
-      "name": "Webhook",
+      "id": "f67f04bc-90b4-45a2-a9d0-ab340c492189",
+      "name": "Receive File",
       "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [0, 300],
-      "webhookId": "d30cedef-c69d-4ac4-b51e-667eb186c29b"
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "0594bd8d-4f54-414f-8b4f-0080be710d65"
     },
     {
       "parameters": {
-        "fromEmail": "reports@northstar-commerce.example",
-        "toEmail": "={{ $json['report_recipient_email'] || 'management@northstar-commerce.example' }}",
-        "subject": "=Sales Report {{ $json['period_start'] }} to {{ $json['period_end'] }} ({{ $json['company_name'] }})",
-        "emailFormat": "text",
-        "text": "=Hello,\n\nThe automated sales report is attached.\n\nCompany: {{ $json['company_name'] }}\nPeriod: {{ $json['period_start'] }} to {{ $json['period_end'] }}\nTotal revenue: {{ $json['currency'] }} {{ $json['total_revenue'] }}\nTotal orders: {{ $json['total_orders'] }}\nUnits sold: {{ $json['total_units'] }}\n\nGenerated at: {{ $json['generated_at'] }}\nStatus: {{ $json['status'] }}\n\nThis email was produced automatically by the n8n workflow triggered by the Python pipeline.",
-        "attachments": "report"
+        "sendTo": "your-email@gmail.com",
+        "subject": "You received a file",
+        "emailType": "text",
+        "message": "Please find the attached file, sent via the n8n webhook workflow.",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "=data0"
+              }
+            ]
+          }
+        }
       },
-      "id": "f2f717e3-aa22-4ce2-954c-791d5a2f9936",
-      "name": "Send Email",
-      "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 1.2,
-      "position": [240, 300],
+      "id": "639f3477-5503-4b92-8e36-7a8b40ef708b",
+      "name": "Send File via Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        0
+      ],
+      "webhookId": "c133a3be-3d11-4d89-85be-2a70b8602b36",
       "credentials": {
-        "smtp": {
-          "id": "YOUR_SMTP_CREDENTIALS_HERE",
-          "name": "SMTP Account"
+        "gmailOAuth2": {
+          "id": "NNPrVPuNE052hwfM",
+          "name": "Gmail account"
         }
       }
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ success: true, message: 'Report email sent', report_name: $json['report_name'] }) }}",
-        "options": {}
-      },
-      "id": "91b0c2c2-0811-48ef-ba50-698ad0184dfa",
-      "name": "Respond to Webhook",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
-      "position": [480, 300]
     }
   ],
+  "pinData": {},
   "connections": {
-    "Webhook": {
+    "Receive File": {
       "main": [
         [
           {
-            "node": "Send Email",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Send Email": {
-      "main": [
-        [
-          {
-            "node": "Respond to Webhook",
+            "node": "Send File via Gmail",
             "type": "main",
             "index": 0
           }
@@ -76,11 +67,16 @@
       ]
     }
   },
+  "active": true,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate"
   },
-  "pinData": {},
+  "versionId": "efad333d-0f84-42d3-9975-d14647f05ff4",
   "meta": {
-    "instanceId": "portfolio-demo"
-  }
+    "instanceId": "4743ac6f7615b928f3ce8e24bb4817a94e9736173abe76f507bad28d6b2e664a"
+  },
+  "nodeGroups": [],
+  "id": "Rg24yhuyuI97U0w6",
+  "tags": []
 }
