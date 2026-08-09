@@ -118,8 +118,6 @@ attaches that file to the email. Python never needs SMTP credentials; n8n owns t
 ├── config.yaml              # runtime configuration
 ├── requirements.txt
 ├── run.py                   # CLI entry point
-├── prompt.md                # original project specification
-├── PROJECT_STATUS.md        # internal dev tracking
 ├── data/
 │   ├── input/               # monthly sales Excel files (auto-generated)
 │   └── processed/           # (reserved for cleaned/combined artifacts)
