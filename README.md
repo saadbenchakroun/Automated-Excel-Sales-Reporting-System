@@ -90,16 +90,16 @@ attaches that file to the email. Python never needs SMTP credentials; n8n owns t
 
 ## Features
 
-- **Automatic file discovery** — no hardcoded filenames; every `.xlsx` in `data/input` is processed.
-- **Validation** — required columns, data types, dates, quantities, prices, discounts, order statuses; warnings vs. errors are distinguished and logged.
-- **Cleaning pipeline** — duplicate removal, whitespace trimming, capitalization and category/region normalization, missing-value repair, date normalization, and quarantine of invalid rows.
-- **Business analytics** — total/gross revenue, discounts, order counts, units sold, average order value, customers, products, cancellation rate, month-over-month growth, and breakdowns by month, category, product, salesperson, region, payment method, plus top-10 lists.
-- **Professional Excel report** — 9 worksheets with KPIs, 4 charts, number/currency/percent formats, freeze panes, autofilters, and conditional formatting.
-- **Data Quality worksheet** — shows exactly what was found and fixed.
-- **Logging** — console + rotating file (`logs/automation.log`).
-- **n8n integration** — the report is uploaded to a webhook that emails it; retries with exponential backoff; the local report is never deleted on failure.
-- **Configuration & security** — everything configurable via `config.yaml` + `.env`; no secrets committed.
-- **Tests** — 33 pytest tests covering cleaning, validation, analytics, report generation and webhook payloads.
+- **Automatic file discovery**: no hardcoded filenames; every `.xlsx` in `data/input` is processed.
+- **Validation**: required columns, data types, dates, quantities, prices, discounts, order statuses; warnings vs. errors are distinguished and logged.
+- **Cleaning pipeline**: duplicate removal, whitespace trimming, capitalization and category/region normalization, missing-value repair, date normalization, and quarantine of invalid rows.
+- **Business analytics**: total/gross revenue, discounts, order counts, units sold, average order value, customers, products, cancellation rate, month-over-month growth, and breakdowns by month, category, product, salesperson, region, payment method, plus top-10 lists.
+- **Professional Excel report**: 9 worksheets with KPIs, 4 charts, number/currency/percent formats, freeze panes, autofilters, and conditional formatting.
+- **Data Quality worksheet**: shows exactly what was found and fixed.
+- **Logging**: console + rotating file (`logs/automation.log`).
+- **n8n integration**: the report is uploaded to a webhook that emails it; retries with exponential backoff; the local report is never deleted on failure.
+- **Configuration & security**: everything configurable via `config.yaml` + `.env`; no secrets committed.
+- **Tests**: 33 pytest tests covering cleaning, validation, analytics, report generation and webhook payloads.
 
 ## Tech Stack
 
@@ -140,7 +140,8 @@ attaches that file to the email. Python never needs SMTP credentials; n8n owns t
 │   ├── report_generator.py  # 9-sheet Excel report with charts
 │   └── webhook_client.py    # n8n delivery (multipart, retry, backoff)
 ├── scripts/
-│   └── generate_sample_data.py
+│   ├── generate_sample_data.py
+│   └── send_webhook_only.py   # deliver the latest report to n8n without a full rerun
 ├── tests/                   # pytest suite
 └── n8n/
     ├── workflow.json        # importable n8n workflow
@@ -185,7 +186,7 @@ Each workbook contains realistic transactions: order IDs, dates, customers, prod
 categories, quantities, prices, discounts, salespeople, regions, payment methods and
 order statuses.
 
-The generated data is **intentionally messy** — a small percentage of rows contain
+The generated data is **intentionally messy**. A small percentage of rows contain
 realistic problems so the validation and cleaning pipeline can be demonstrated
 (see [Data Quality](#data-quality)).
 
@@ -204,7 +205,7 @@ validation:     # allowed order statuses, max discount
 webhook:        # enabled, url placeholder, timeout, retries
 ```
 
-### `.env` (secrets — never committed)
+### `.env` (secrets, never committed)
 
 ```env
 N8N_WEBHOOK_URL=https://your-n8n-host.example.com/webhook/sales-report
@@ -228,6 +229,13 @@ python run.py --input data/input --output reports
 
 # Custom config
 python run.py --config my-config.yaml
+```
+
+If you already generated a report and just want to re-deliver the latest one to n8n
+(no reloading, cleaning, or rebuilding), use:
+
+```powershell
+python scripts\send_webhook_only.py
 ```
 
 A successful run prints a summary:
@@ -338,25 +346,25 @@ The suite covers:
 
 These are realistic next steps **not implemented here**:
 
-- **Database integration** — store raw/cleaned data in SQLite/Postgres instead of a combined DataFrame.
-- **Scheduled execution** — run via cron / Windows Task Scheduler / GitHub Actions on a weekly cadence.
-- **Cloud storage** — archive reports in S3 / Azure Blob / Google Cloud Storage instead of local disk.
-- **Authentication** — protect the n8n webhook (basic auth, webhook path secret, or n8n's static bearer token).
-- **Monitoring & alerting** — send pipeline failure notifications (email, Slack) and expose metrics.
-- **Docker** — containerize the pipeline and the n8n instance for reproducible deployment.
-- **API integration** — pull orders from an ERP/e-commerce API (Shopify, WooCommerce, etc.) instead of Excel.
-- **Cloud deployment** — run on a VM / serverless function with managed scheduling.
-- **Configurable date parsing** — make the day-first vs. month-first ambiguity configurable.
+- **Database integration**: store raw/cleaned data in SQLite/Postgres instead of a combined DataFrame.
+- **Scheduled execution**: run via cron / Windows Task Scheduler / GitHub Actions on a weekly cadence.
+- **Cloud storage**: archive reports in S3 / Azure Blob / Google Cloud Storage instead of local disk.
+- **Authentication**: protect the n8n webhook (basic auth, webhook path secret, or n8n's static bearer token).
+- **Monitoring & alerting**: send pipeline failure notifications (email, Slack) and expose metrics.
+- **Docker**: containerize the pipeline and the n8n instance for reproducible deployment.
+- **API integration**: pull orders from an ERP/e-commerce API (Shopify, WooCommerce, etc.) instead of Excel.
+- **Cloud deployment**: run on a VM / serverless function with managed scheduling.
+- **Configurable date parsing**: make the day-first vs. month-first ambiguity configurable.
 
 ## Portfolio Highlights
 
-- **Automates a real repetitive workflow** — the entire manual "combine → clean → calculate → format → email" loop is replaced by one command.
-- **Robust data cleaning** — the pipeline validates, repairs and normalizes messy data instead of blindly copying it.
-- **Professional reporting** — a 9-sheet workbook with KPIs, charts, formatting, and conditional formatting that looks like a genuine business report.
-- **Automated business metrics** — revenue, AOV, cancellation rate, growth trends, and breakdowns are computed reliably.
-- **Real integration** — the report is uploaded to n8n and emailed, demonstrating end-to-end automation (no fake local-path shortcuts).
-- **Engineered for the real world** — logging, configuration, error handling, retries with backoff, and a Data Quality worksheet show production thinking.
-- **Configurable** — folders, currency, file patterns and webhook behavior are all controlled by `config.yaml` and `.env`.
+- **Automates a real repetitive workflow**: the entire manual "combine → clean → calculate → format → email" loop is replaced by one command.
+- **Robust data cleaning**: the pipeline validates, repairs and normalizes messy data instead of blindly copying it.
+- **Professional reporting**: a 9-sheet workbook with KPIs, charts, formatting, and conditional formatting that looks like a genuine business report.
+- **Automated business metrics**: revenue, AOV, cancellation rate, growth trends, and breakdowns are computed reliably.
+- **Real integration**: the report is uploaded to n8n and emailed, demonstrating end-to-end automation (no fake local-path shortcuts).
+- **Engineered for the real world**: logging, configuration, error handling, retries with backoff, and a Data Quality worksheet show production thinking.
+- **Configurable**: folders, currency, file patterns and webhook behavior are all controlled by `config.yaml` and `.env`.
 
 > Note: this project does not claim a specific number of hours saved. For many small
 > businesses, a similar workflow takes an employee 2-4 hours per week; automating it
