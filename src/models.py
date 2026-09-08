@@ -95,6 +95,15 @@ class WebhookResult:
 
 
 @dataclass
+class EmailResult:
+    """Outcome of direct SMTP email delivery."""
+
+    success: bool
+    message: str = ""
+    recipient: str | None = None
+
+
+@dataclass
 class PipelineResult:
     """Everything produced by a full pipeline run."""
 
@@ -104,5 +113,6 @@ class PipelineResult:
     analytics: AnalyticsResult
     report_path: Path | None
     webhook: WebhookResult | None
-    started_at: datetime
-    finished_at: datetime
+    email: EmailResult | None = None
+    started_at: datetime = field(default_factory=datetime.now)
+    finished_at: datetime = field(default_factory=datetime.now)

@@ -29,3 +29,7 @@ class ReportGenerationError(PipelineError):
 
 class WebhookError(PipelineError):
     """Raised when the report webhook fails permanently."""
+
+
+class EmailError(PipelineError):
+    """Raised when direct email delivery fails permanently."""

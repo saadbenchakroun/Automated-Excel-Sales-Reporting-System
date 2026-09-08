@@ -20,9 +20,11 @@ data/generated/
 
 # Internal / spec files (not part of the deliverable)
 AGENTS.md
+AI_CONTEXT.md
 PROJECT_STATUS.md
 prompt.md
 forme/
+~$*.xlsx
 
 # OS / editor
 .DS_Store

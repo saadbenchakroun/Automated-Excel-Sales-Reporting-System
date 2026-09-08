@@ -33,6 +33,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--input", default=None, help="Override the input folder (default: from config.yaml)")
     parser.add_argument("--output", default=None, help="Override the output/report folder (default: from config.yaml)")
     parser.add_argument("--no-webhook", action="store_true", help="Disable the n8n webhook even if configured")
+    parser.add_argument("--no-email", action="store_true", help="Disable direct SMTP email even if configured")
     parser.add_argument("--generate-data", action="store_true", help="Generate sample data into data/input then exit")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for sample data generation (default: 42)")
     parser.add_argument("--version", action="version", version=f"%(prog)s {VERSION}")
@@ -61,6 +62,13 @@ def _print_summary(result) -> None:
             print(f"  Note: report is still available locally at {result.report_path}")
     else:
         print("Webhook delivery     : disabled")
+    if result.email is not None:
+        status = "SUCCESS" if result.email.success else "FAILED"
+        print(f"Email delivery       : {status} (to={result.email.recipient})")
+        if not result.email.success:
+            print(f"  Email error: {result.email.message}")
+    else:
+        print("Email delivery       : disabled")
     print("=" * 62)
 
 
@@ -80,6 +88,8 @@ def main(argv: list[str] | None = None) -> int:
             config.output_folder = Path(args.output)
         if args.no_webhook:
             config.webhook_enabled = False
+        if args.no_email:
+            config.email_enabled = False
 
         logger = setup_logging(config)
         logger.info("Application started (version %s)", VERSION)

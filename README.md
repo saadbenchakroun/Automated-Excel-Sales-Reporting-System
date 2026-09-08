@@ -12,11 +12,12 @@ data, calculating metrics, formatting a report, and emailing it to management.
 This project automates that entire workflow for a fictional e-commerce company,
 **Northstar Commerce**. The Python application discovers monthly sales files, validates
 and cleans them, combines the data, computes business metrics, builds a professional
-multi-sheet Excel report **with charts**, and uploads the finished report to an **n8n**
-workflow that emails it to management.
+multi-sheet Excel report **with charts**, and delivers the finished report. You can use
+an **n8n** workflow, send it directly through Python SMTP, or run both at the same time.
 
-The only remaining manual step is the email delivery, which is handled by n8n on purpose:
-Python does the heavy data/reporting lifting, n8n handles notification.
+The original design kept email delivery in n8n on purpose so Python could focus on
+data and reporting while n8n handled notification. The direct Python email option is
+there if you prefer to keep everything in one place.
 
 ## Business Scenario
 
@@ -55,38 +56,44 @@ Generate professional Excel report
     ↓
 Save report
     ↓
-Send webhook to n8n (multipart/form-data with the actual file)
-    ↓
-n8n emails the report
+Deliver (choose one or both):
+  → n8n webhook (multipart/form-data) → n8n emails the report
+  → direct Python SMTP email (with attachment)
 ```
 
 ## Architecture
 
 ```
                   ┌────────────────────────────────────────────┐
-                  │  data/input/*.xlsx  (6 monthly files)      │
-                  └──────────────────────┬─────────────────────┘
-                                         ▼
+                   │  data/input/*.xlsx  (6 monthly files)      │
+                   └──────────────────────┬─────────────────────┘
+                                          ▼
    ┌─────────────────────────  PYTHON PIPELINE  ─────────────────────────┐
    │  data_loader → data_validator → data_cleaner → analytics            │
    │        → report_generator (9-sheet .xlsx with charts)               │
    └─────────────────────────────────┬────────────────────────────────────┘
-                                     │  POST multipart/form-data
-                                     │  (file part "report" + JSON metadata)
-                                     ▼
-                          ┌───────────────────────┐
-                          │       n8n             │
-                          │ Webhook → Email node  │
-                          └───────────────────────┘
-                                     │
-                                     ▼
-                          Management inbox receives
-                          the Excel report attached
+                       ┌──────────────┼──────────────┐
+                       │              │              │
+          POST multipart/form-data    │     direct SMTP (smtplib)
+          (file part "report"         │     (EmailMessage + attachment)
+           + JSON metadata)            │
+                       ▼              ▼
+              ┌───────────────┐  ┌──────────────┐
+              │      n8n      │  │ Python email │
+              │Webhook → Email│  │  sender      │
+              └───────┬───────┘  └──────┬───────┘
+                      └────────┬────────┘
+                               ▼
+                    Management inbox receives
+                    the Excel report attached
 ```
 
 **Why this split?** Sending a local filesystem path to a remote n8n server does not
 work. Python therefore uploads the *actual file* as `multipart/form-data`, and n8n
-attaches that file to the email. Python never needs SMTP credentials; n8n owns them.
+attaches that file to the email. When you use n8n, Python never needs SMTP
+credentials. If you use the direct Python email option, SMTP credentials live in
+`.env` and Python sends the message itself with the workbook attached. Both paths
+are available and you can run either or both.
 
 ## Features
 
@@ -98,6 +105,7 @@ attaches that file to the email. Python never needs SMTP credentials; n8n owns t
 - **Data Quality worksheet**: shows exactly what was found and fixed.
 - **Logging**: console + rotating file (`logs/automation.log`).
 - **n8n integration**: the report is uploaded to a webhook that emails it; retries with exponential backoff; the local report is never deleted on failure.
+- **Direct email**: optional Python SMTP delivery with TLS and attachment, works alongside n8n or on its own. No extra dependency.
 - **Configuration & security**: everything configurable via `config.yaml` + `.env`; no secrets committed.
 - **Tests**: 33 pytest tests covering cleaning, validation, analytics, report generation and webhook payloads.
 
@@ -136,10 +144,12 @@ attaches that file to the email. Python never needs SMTP credentials; n8n owns t
 │   ├── data_cleaner.py      # cleaning pipeline
 │   ├── analytics.py         # metrics + breakdowns
 │   ├── report_generator.py  # 9-sheet Excel report with charts
-│   └── webhook_client.py    # n8n delivery (multipart, retry, backoff)
+│   ├── webhook_client.py    # n8n delivery (multipart, retry, backoff)
+│   └── email_sender.py      # direct SMTP email (TLS + attachment)
 ├── scripts/
 │   ├── generate_sample_data.py
-│   └── send_webhook_only.py   # deliver the latest report to n8n without a full rerun
+│   ├── send_webhook_only.py   # deliver the latest report to n8n without a full rerun
+│   └── send_email_only.py     # deliver the latest report via SMTP without a full rerun
 ├── tests/                   # pytest suite
 └── n8n/
     ├── workflow.json        # importable n8n workflow
@@ -201,6 +211,7 @@ report:         # filename pattern, include raw data sheet
 logging:        # level, rotation
 validation:     # allowed order statuses, max discount
 webhook:        # enabled, url placeholder, timeout, retries
+email:          # enabled, SMTP host/port, from/to, subject, TLS
 ```
 
 ### `.env` (secrets, never committed)
@@ -208,19 +219,34 @@ webhook:        # enabled, url placeholder, timeout, retries
 ```env
 N8N_WEBHOOK_URL=https://your-n8n-host.example.com/webhook/sales-report
 REPORT_RECIPIENT_EMAIL=management@your-company.com
+
+# For direct Python email (optional, works with Gmail, Outlook, SendGrid, etc.)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+EMAIL_FROM=your-email@gmail.com
+EMAIL_TO=management@your-company.com
 ```
 
-Copy `.env.example` to `.env` and fill in the real values. The webhook URL is read
-from the environment, so secrets never live in `config.yaml` or the repository.
+Copy `.env.example` to `.env` and fill in the real values. Secrets are read
+from the environment, so they never live in `config.yaml` or the repository. To use
+direct email, set `email.enabled: true` in `config.yaml` and fill in the SMTP fields.
+You can leave either delivery method disabled if you only need one.
 
 ## Running the Automation
 
 ```powershell
-# Full run (generates the report and emails it via n8n)
+# Full run (generates the report and delivers it)
+# By default both delivery methods run if they are enabled in config
 python run.py
 
-# Build the report without sending email (no n8n needed)
-python run.py --no-webhook
+# Build the report without delivering it
+python run.py --no-webhook --no-email
+
+# Only n8n or only direct email
+python run.py --no-email        # n8n only
+python run.py --no-webhook      # direct email only
 
 # Override folders
 python run.py --input data/input --output reports
@@ -229,11 +255,12 @@ python run.py --input data/input --output reports
 python run.py --config my-config.yaml
 ```
 
-If you already generated a report and just want to re-deliver the latest one to n8n
+If you already generated a report and just want to re-deliver the latest one
 (no reloading, cleaning, or rebuilding), use:
 
 ```powershell
-python scripts\send_webhook_only.py
+python scripts\send_webhook_only.py   # to n8n
+python scripts\send_email_only.py     # via direct SMTP
 ```
 
 A successful run prints a summary:
@@ -249,6 +276,7 @@ Average order value  : 358.45
 Cancellation rate    : 6.67%
 Report               : C:\...\reports\sales_report_2026-08-07.xlsx
 Webhook delivery     : SUCCESS (attempts=1)
+Email delivery       : SUCCESS (to=management@your-company.com)
 ```
 
 Full details are written to `logs/automation.log`.

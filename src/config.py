@@ -52,6 +52,17 @@ class Config:
     webhook_backoff_base: int
     webhook_include_attachment: bool
 
+    email_enabled: bool = False
+    email_smtp_host: str = ""
+    email_smtp_port: int = 587
+    email_smtp_user: str = ""
+    email_smtp_pass: str = ""
+    email_from: str = ""
+    email_to: str = ""
+    email_subject_template: str = "Sales Report - {company} - {date}"
+    email_use_tls: bool = True
+    email_timeout: int = 30
+
     env_file: str = field(default=".env")
 
     @classmethod
@@ -84,6 +95,7 @@ class Config:
         logging_cfg = raw.get("logging", {})
         validation = raw.get("validation", {})
         webhook = raw.get("webhook", {})
+        email_cfg = raw.get("email", {})
 
         def resolve(value: str) -> str:
             if isinstance(value, str) and value.startswith("${") and value.endswith("}"):
@@ -96,6 +108,21 @@ class Config:
         webhook_enabled = bool(
             webhook.get("enabled", True) or (webhook_url and webhook_url != "")
         )
+
+        # Email config (disabled by default; env vars resolved via ${VAR})
+        email_enabled_raw = email_cfg.get("enabled", False)
+        # Allow enabling via env: if SMTP_HOST/EMAIL_TO are set, treat as enabled
+        # only if the yaml explicitly enables it — no auto-enable from env.
+        email_enabled = bool(email_enabled_raw)
+        email_smtp_host = resolve(str(email_cfg.get("smtp_host", "")))
+        email_smtp_port = int(email_cfg.get("smtp_port", 587))
+        email_smtp_user = resolve(str(email_cfg.get("smtp_user", "")))
+        email_smtp_pass = resolve(str(email_cfg.get("smtp_pass", "")))
+        email_from = resolve(str(email_cfg.get("from_email", "")))
+        email_to = resolve(str(email_cfg.get("to_email", "")))
+        email_subject_template = str(email_cfg.get("subject_template", "Sales Report - {company} - {date}"))
+        email_use_tls = bool(email_cfg.get("use_tls", True))
+        email_timeout = int(email_cfg.get("timeout_seconds", 30))
 
         config = cls(
             company_name=str(app.get("company_name", "Northstar Commerce")),
@@ -121,6 +148,16 @@ class Config:
             webhook_max_attempts=int(webhook.get("max_attempts", 3)),
             webhook_backoff_base=int(webhook.get("backoff_base_seconds", 2)),
             webhook_include_attachment=bool(webhook.get("include_attachment", True)),
+            email_enabled=email_enabled,
+            email_smtp_host=email_smtp_host,
+            email_smtp_port=email_smtp_port,
+            email_smtp_user=email_smtp_user,
+            email_smtp_pass=email_smtp_pass,
+            email_from=email_from,
+            email_to=email_to,
+            email_subject_template=email_subject_template,
+            email_use_tls=email_use_tls,
+            email_timeout=email_timeout,
         )
         config.validate(require_webhook=require_webhook)
         return config
@@ -137,3 +174,16 @@ class Config:
                 "Either set the N8N_WEBHOOK_URL environment variable in .env "
                 "or run with --no-webhook."
             )
+        if self.email_enabled:
+            missing = []
+            if not self.email_smtp_host:
+                missing.append("SMTP_HOST")
+            if not self.email_from:
+                missing.append("EMAIL_FROM")
+            if not self.email_to:
+                missing.append("EMAIL_TO")
+            if missing:
+                raise ConfigError(
+                    f"Email is enabled but missing: {', '.join(missing)}. "
+                    "Set them in .env (SMTP_HOST, EMAIL_FROM, EMAIL_TO) or disable email in config.yaml."
+                )

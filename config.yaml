@@ -40,3 +40,17 @@ webhook:
   max_attempts: 3
   backoff_base_seconds: 2
   include_attachment: true
+
+email:
+  # If true, Python sends the report directly via SMTP (in addition to / instead of n8n).
+  # Credentials are read from environment variables; .env is gitignored.
+  enabled: false
+  smtp_host: "${SMTP_HOST}"
+  smtp_port: 587
+  smtp_user: "${SMTP_USER}"
+  smtp_pass: "${SMTP_PASS}"
+  from_email: "${EMAIL_FROM}"
+  to_email: "${EMAIL_TO}"
+  subject_template: "Sales Report - {company} - {date}"
+  use_tls: true
+  timeout_seconds: 30

@@ -9,6 +9,7 @@ from datetime import datetime
 from src import data_cleaner, data_loader, data_validator
 from src.analytics import compute_all
 from src.config import Config
+from src.email_sender import send_email
 from src.models import PipelineResult
 from src.report_generator import generate_report
 from src.webhook_client import send_report
@@ -100,6 +101,18 @@ def run_pipeline(config: Config) -> PipelineResult:
     else:
         logger.info("Webhook disabled - report saved locally only.")
 
+    # 8. Deliver via direct SMTP email (if enabled, independent of webhook).
+    email_result = None
+    if config.email_enabled:
+        email_result = send_email(config, report_path, metrics)
+        if email_result.success:
+            logger.info("Email delivery succeeded to %s", email_result.recipient)
+        else:
+            logger.error("Email delivery FAILED: %s", email_result.message)
+            logger.error("Report remains available locally at %s", report_path)
+    else:
+        logger.info("Direct email disabled.")
+
     finished_at = datetime.now()
     logger.info("=== Pipeline finished in %s ===", finished_at - started_at)
 
@@ -110,6 +123,7 @@ def run_pipeline(config: Config) -> PipelineResult:
         analytics=analytics_result,
         report_path=report_path,
         webhook=webhook_result,
+        email=email_result,
         started_at=started_at,
         finished_at=finished_at,
     )

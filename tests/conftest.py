@@ -36,6 +36,16 @@ def config(tmp_path: Path) -> Config:
         webhook_max_attempts=3,
         webhook_backoff_base=0,
         webhook_include_attachment=True,
+        email_enabled=False,
+        email_smtp_host="smtp.example.com",
+        email_smtp_port=587,
+        email_smtp_user="",
+        email_smtp_pass="",
+        email_from="reports@example.com",
+        email_to="manager@example.com",
+        email_subject_template="Sales Report - {company} - {date}",
+        email_use_tls=True,
+        email_timeout=5,
     )
 
 
